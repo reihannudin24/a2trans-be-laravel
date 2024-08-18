@@ -43,6 +43,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', 'logout');
     });
 
+
+    Route::prefix('user')->controller(UserController::class)->group(function () {
+        Route::get('/profile', 'profile');
+    });
+
+
     Route::prefix('categories')->controller(CategoriesController::class)->group(function () {
         Route::post('/add/new', 'create');
         Route::post('/add/new/image', 'addNewImage');
@@ -91,9 +97,3 @@ Route::prefix('bus')->controller(BusController::class)->group(function () {
 });
 
 
-
-
-
-Route::prefix('user')->controller(UserController::class)->group(function () {
-    Route::get('/show', 'show');
-});

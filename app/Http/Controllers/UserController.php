@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ResponseHelper;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
@@ -11,33 +13,14 @@ class UserController extends Controller
 {
     public function profile(Request $request)
     {
-        $token = $request->header('Authorization'); // Assumes token is passed in the Authorization header
 
-        // Verify the token
-        $tokenService = new TokenService();
-        $tokenVerify = $tokenService->checkToken($token);
+        $token = $request->bearerToken();
 
-        if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Token tidak valid',
-                'errors' => ['Token tidak valid'],
-                'redirect' => '/login'
-            ], 401);
-        }
-
-        // Fetch user by token
-        $user = DB::table('users')->where('token_remember', $token)->first();
-
+        // Verify token
+        $user = User::where('remember_token', $token)->first();
         if (!$user) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Email tidak terdaftar',
-                'errors' => ['Email tidak terdaftar'],
-                'redirect' => '/login'
-            ], 401);
+            return ResponseHelper::errorResponse(401, 'Token tidak valid', '/add/new/vendor');
         }
-
         return response()->json([
             'status' => 'success',
             'message' => 'Berhasil menampilkan pengguna',
