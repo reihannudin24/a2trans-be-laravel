@@ -391,6 +391,7 @@ class BusController extends Controller
                 '/panel/list/bus'
             );
         } catch (\Exception $e) {
+            dd($e);
             DB::rollBack();
             return ResponseHelper::errorResponse(
                 500,
@@ -525,7 +526,7 @@ class BusController extends Controller
                     'seat' => $bus->seat,
                     'type' => $bus->type,
                     'categories_id' => $bus->categories_id,
-                    'merek_id' => $bus->merek_id,
+                    'brand_id' => $bus->brand_id,
                     'created_at' => $bus->created_at,
                     'category_name' => $bus->category->name,
                     'facilities' => $bus->facilities->map(function ($facility) {
