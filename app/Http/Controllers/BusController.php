@@ -224,7 +224,7 @@ class BusController extends Controller
             'type' => 'required|string',
             'categories_id' => 'required|exists:categories,id',
             'brand_id' => 'required|exists:brands,id',
-            'vendor_id' => 'nullable|exists:vendors,id',
+            'vendor_id' => 'nullable',
             'thumbnail' => 'nullable|file|mimes:jpg,jpeg,png',
         ], [
             'name.required' => 'Nama bus tidak boleh kosong',
@@ -309,7 +309,7 @@ class BusController extends Controller
             'type' => 'required|string',
             'categories_id' => 'required|exists:categories,id',
             'brand_id' => 'required|exists:brands,id',
-            'vendor_id' => 'nullable|exists:vendors,id',
+            'vendor_id' => 'nullable',
             'thumbnail' => 'nullable|file|mimes:jpg,jpeg,png',
 //            'vendor_id' => 'required|exists:vendors,id',
 //            'thumbnail' => 'required|file|mimes:jpg,jpeg,png',
@@ -462,7 +462,6 @@ class BusController extends Controller
                 );
             }
         } catch (\Exception $e) {
-            dd($e);
             DB::rollBack();
             return ResponseHelper::errorResponse(
                 500,
@@ -473,77 +472,6 @@ class BusController extends Controller
         }
     }
 
-//    public function delete(Request $request)
-//    {
-//        // Validate input
-//        $validation = Validator::make($request->all(), [
-//            'id' => 'required|exists:bus,id',
-//            'token' => 'required|string',
-//        ], [
-//            'id.required' => 'ID bus tidak boleh kosong',
-//            'id.exists' => 'Bus tidak ditemukan',
-//            'token.required' => 'Token tidak boleh kosong',
-//        ]);
-//
-//        if ($validation->fails()) {
-//            return ResponseHelper::errorResponse(
-//                401,
-//                $validation->errors(),
-//                '/delete/bus'
-//            );
-//        }
-//
-//        $validated = $validation->validated();
-//
-//        $tokenVerify = TokenHelper::checkToken($validated['token']);
-//        if (!$tokenVerify['valid']) {
-//            return ResponseHelper::errorResponse(
-//                401,
-//                'Token tidak valid',
-//                '/delete/bus'
-//            );
-//        }
-//
-//        $user = User::where('remember_token', $validated['token'])->first();
-//        if (!$user) {
-//            return ResponseHelper::errorResponse(
-//                401,
-//                'Pengguna tidak valid',
-//                '/delete/bus'
-//            );
-//        }
-//
-//        DB::beginTransaction();
-//
-//        try {
-//            $bus = Bus::find($validated['id']);
-//            if ($bus) {
-//                $bus->delete();
-//                DB::commit();
-//
-//                return ResponseHelper::successResponse(
-//                    200,
-//                    'Bus berhasil dihapus',
-//                    null,
-//                    '/panel/list/bus'
-//                );
-//            } else {
-//                return ResponseHelper::errorResponse(
-//                    404,
-//                    'Bus tidak ditemukan',
-//                    '/panel/list/bus'
-//                );
-//            }
-//        } catch (\Exception $e) {
-//            DB::rollBack();
-//            return ResponseHelper::errorResponse(
-//                500,
-//                'Gagal menghapus bus',
-//                '/panel/list/bus',
-//                $e->getMessage()
-//            );
-//        }
-//    }
 
     // TODO : SHOW BUS === success
     public function show(Request $request)
