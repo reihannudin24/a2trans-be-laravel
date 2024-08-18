@@ -64,7 +64,6 @@ class BrandController extends Controller
     {
         // Define validation rules
         $validation = Validator::make($request->all(), [
-            'token' => 'required',
             'id' => 'required|integer',
             'name' => 'required|string|max:255',
         ]);
