@@ -506,14 +506,12 @@ class BusController extends Controller
 
 
         try {
-            // Query untuk mengambil data bus beserta relasinya
             $query = Bus::with([
                 'category',
                 'facilities',
                 'images'
             ]);
 
-            // Jika ada ID bus, tambahkan kondisi ke query
             if ($id) {
                 $query->where('id', $id);
             }
@@ -554,8 +552,6 @@ class BusController extends Controller
                 '/panel/list/bus'
             );
         } catch (\Exception $e) {
-
-            dd($e);
             return ResponseHelper::errorResponse(
                 500,
                 'Gagal menampilkan bus',
