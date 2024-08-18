@@ -39,18 +39,23 @@ class AuthController extends Controller
             );
         }
 
+        $validate = $validation->validate();
+
         DB::beginTransaction();
 
-        try {
-            $hashPassword = Hash::make($request->password);
+        $hashPassword = Hash::make($validate['password']);
 
-            $user = User::create([
-                'email' => $request->email,
-                'username' => $request->username,
+        try {
+
+            User::query()->insert([
+                'email' => $validate['email'],
+                'username' => $validate['username'],
                 'password' => $hashPassword,
-                'role' => $request->role,
+                'role' => $validate['role'],
                 'remember_token' => null,
             ]);
+
+            $user = User::query()->where('email',$validate['email'])->first();
 
             DB::commit();
 
@@ -121,6 +126,10 @@ class AuthController extends Controller
                 );
             }
 
+            User::query()->where('id', $user->id)->update([
+                'remember_token' => $token
+            ]);
+
             Cookie::queue('auth_token', $token, 60 * 24, null, null, false, true);
 
             DB::commit();
@@ -151,6 +160,9 @@ class AuthController extends Controller
     // TODO : LOGOUT === success
     public function logout(Request $request)
     {
+
+
+
         $validation = Validator::make($request->all(), [
             'email' => 'required|email'
         ], [
@@ -180,7 +192,7 @@ class AuthController extends Controller
         DB::beginTransaction();
 
         try {
-            $user->update(['remember_token' => null]);
+            User::query()->where('id', $user->id)->update(['remember_token' => null]);
             Cookie::queue(Cookie::forget('auth_token'));
 
             DB::commit();
