@@ -89,11 +89,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/delete', 'delete');
     });
 
-
     Route::prefix('image_bus')->controller(ImageBusController::class)->group(function () {
-        Route::post('/add/new', 'createNew');
+        Route::post('/add/new', 'create');
         Route::delete('/delete', 'delete');
-        Route::get('/show', 'show');
     });
 
 

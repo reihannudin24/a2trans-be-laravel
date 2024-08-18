@@ -212,6 +212,7 @@ class BusController extends Controller
     }
 
 
+//    ==================================================
 
     // TODO : CREATE BUS === success
     public function create(Request $request)
@@ -364,6 +365,7 @@ class BusController extends Controller
                 Storage::disk('public')->delete($oldThumbnailPath);
             }
 
+
             // Store new thumbnail
             $thumbnailPath = $request->file('thumbnail')->store('upload', 'public');
             $thumbnailUrl = Storage::url($thumbnailPath);
@@ -475,32 +477,6 @@ class BusController extends Controller
 
 
     // TODO : SHOW BUS === success
-//    public function show(Request $request)
-//    {
-//        $id = $request->query('id');
-//        try {
-//            $buses = Bus::when($id, function ($query, $id) {
-//                return $query->where('id', $id);
-//            })->get();
-//
-//            return ResponseHelper::successResponse(
-//                200,
-//                'Bus berhasil ditampilkan',
-//                [
-//                    'buses' => $buses
-//                ],
-//                '/panel/list/bus'
-//            );
-//        } catch (\Exception $e) {
-//            return ResponseHelper::errorResponse(
-//                500,
-//                'Gagal menampilkan bus',
-//                '/panel/list/bus',
-//                $e->getMessage()
-//            );
-//        }
-//    }
-
     public function show(Request $request)
     {
         $id = $request->query('id');
