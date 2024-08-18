@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ResponseHelper;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Bus;
@@ -10,64 +11,71 @@ use App\Models\Category;
 use App\Helpers\AuthHelper;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\Response;
 
 class ImageBusController extends Controller
 {
+
     public function create(Request $request)
     {
-        $data = $request->all();
-        $busId = $data['bus_id'];
-        $images = $data['images'];
-        $token = $data['token'];
-        $thumb = $data['thumb'];
+        // Define validation rules
+        $validator = Validator::make($request->all(), [
+            'bus_id' => 'required',
+            'images' => 'nullable|array', // Ensure 'images' is an array
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ], [
+            'bus_id.required' => 'Bus ID tidak boleh kosong',
+            'images.array' => 'Field images harus berupa array',
+            'images.*.image' => 'Setiap file harus berupa gambar',
+            'images.*.mimes' => 'Gambar harus berupa file dengan format: jpeg, png, jpg, gif',
+            'images.*.max' => 'Ukuran setiap gambar maksimal adalah 2MB',
+        ]);
 
-        $tokenVerify = AuthHelper::validateUserToken($token);
-
-        if (!$tokenVerify['valid']) {
+        // Check validation
+        if ($validator->fails()) {
             return response()->json([
-                'status' => 401,
-                'message' => 'Token tidak valid',
-                'error' => 'Token tidak valid',
+                'status' => 400,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors(),
                 'redirect' => '/add/new/bus'
-            ], 401);
+            ], 400);
         }
 
+        $validatedData = $validator->validated();
+
+        $token = $request->bearerToken();
         $user = User::where('remember_token', $token)->first();
         if (!$user) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'Pengguna tidak valid',
-                'error' => 'Pengguna tidak valid',
-                'redirect' => '/add/new/bus'
-            ], 404);
+            return ResponseHelper::errorResponse(
+                401,
+                'Pengguna tidak valid',
+                '/add/new/bus'
+            );
         }
 
         try {
-            if ($thumb) {
-                DB::table('bus')->updateOrInsert(
-                    ['id' => $busId],
-                    ['thumb' => $images]
-                );
+            // Store each image in the image_bus table
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $image) {
+                    $imageFile = $image->store('upload/images/bus', 'public');
+                    $imagePath = Storage::url($imageFile);
 
-                return response()->json([
-                    'status' => 201,
-                    'message' => 'Berhasil menambahkan bus image',
-                    'data' => $images,
-                    'redirect' => '/panel/list/vendor'
-                ], 201);
-            } else {
-                DB::table('image_bus')->updateOrInsert(
-                    ['bus_id' => $busId, 'image' => $images]
-                );
-
-                return response()->json([
-                    'status' => 201,
-                    'message' => 'Berhasil menambahkan bus image',
-                    'data' => $images,
-                    'redirect' => '/panel/list/vendor'
-                ], 201);
+                    DB::table('image_buses')->insert([
+                        'bus_id' => $validatedData['bus_id'],
+                        'image' => $imagePath,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
+
+            return response()->json([
+                'status' => 201,
+                'message' => 'Berhasil menambahkan bus image',
+                'data' => [],
+                'redirect' => '/panel/list/vendor'
+            ], 201);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
@@ -78,21 +86,29 @@ class ImageBusController extends Controller
         }
     }
 
+
     public function delete(Request $request)
     {
-        $data = $request->all();
-        $id = $data['id'];
-        $token = $data['token'];
+        // Validate incoming request
+        $validator = Validator::make($request->all(), [
+            'id' => 'required',
+        ], [
+            'id.required' => 'ID gambar tidak boleh kosong',
+            'id.exists' => 'ID gambar tidak ditemukan',
+        ]);
 
-        $tokenVerify = AuthHelper::validateUserToken($token);
-        if (!$tokenVerify['valid']) {
+        if ($validator->fails()) {
             return response()->json([
-                'status' => 401,
-                'message' => 'Token tidak valid',
-                'error' => 'Token tidak valid',
+                'status' => 400,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors(),
                 'redirect' => '/add/new/bus'
-            ], 401);
+            ], 400);
         }
+
+
+        $validated = $validator->validate();
+        $token = $request->bearerToken();
 
         $user = User::where('remember_token', $token)->first();
         if (!$user) {
@@ -105,7 +121,13 @@ class ImageBusController extends Controller
         }
 
         try {
-            ImageBus::destroy($id);
+            $imageBus = ImageBus::findOrFail($validated['id']);
+
+            if (Storage::disk('public')->exists($imageBus->image)) {
+                Storage::disk('public')->delete($imageBus->image);
+            }
+
+            $imageBus->delete();
 
             return response()->json([
                 'status' => 200,
@@ -122,61 +144,4 @@ class ImageBusController extends Controller
         }
     }
 
-    public function show(Request $request)
-    {
-        $data = $request->all();
-        $id = $data['id'];
-        $token = $data['token'];
-
-        $tokenVerify = AuthHelper::validateUserToken($token);
-        if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token tidak valid',
-                'error' => 'Token tidak valid',
-                'redirect' => '/add/new/bus'
-            ], 401);
-        }
-
-        $user = User::where('remember_token', $token)->first();
-        if (!$user) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'Pengguna tidak valid',
-                'error' => 'Pengguna tidak valid',
-                'redirect' => '/add/new/bus'
-            ], 404);
-        }
-
-        try {
-            $query = DB::table('image_bus');
-            if ($id) {
-                $query->where('id', $id);
-            }
-            $imageBus = $query->get();
-
-            if ($imageBus->isEmpty()) {
-                return response()->json([
-                    'status' => 404,
-                    'message' => 'Gambar tidak ditemukan',
-                    'error' => 'Gambar tidak ditemukan',
-                    'redirect' => '/login'
-                ], 404);
-            }
-
-            return response()->json([
-                'status' => 200,
-                'message' => 'Berhasil menampilkan image bus',
-                'data' => $imageBus,
-                'redirect' => '/panel/list/facilities'
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => $e->getMessage(),
-                'error' => $e->getMessage(),
-                'redirect' => '/panel'
-            ], 500);
-        }
-    }
 }
