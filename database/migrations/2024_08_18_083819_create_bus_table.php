@@ -17,7 +17,6 @@ return new class extends Migration
             $table->text('description');
             $table->text('thumb');
             $table->string('seat');
-            $table->string('seat');
             $table->string('type');
             $table->unsignedBigInteger('categories_id');
             $table->unsignedBigInteger('brand_id');
