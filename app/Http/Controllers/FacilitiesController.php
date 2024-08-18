@@ -3,13 +3,135 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
+use App\Models\Bus;
 use Illuminate\Http\Request;
 use App\Models\Facilities;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class FacilitiesController extends Controller
 {
+
+    public function addFacilitiesToBus(Request $request)
+    {
+        // Validate request data
+        $validator = Validator::make($request->all(), [
+            'facilities_id' => 'required|exists:facilities,id',
+            'bus_id' => 'required|exists:buses,id'
+        ], [
+            'facilities_id.required' => 'ID fasilitas tidak boleh kosong',
+            'facilities_id.exists' => 'ID fasilitas tidak ditemukan',
+            'bus_id.required' => 'ID bus tidak boleh kosong',
+            'bus_id.exists' => 'ID bus tidak ditemukan',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors(),
+                'redirect' => '/add/new/bus'
+            ], 400);
+        }
+
+        $validate = $validator->validate();
+        $token = $request->bearerToken();
+
+        $user = User::where('remember_token', $token)->first();
+        if (!$user) {
+            return ResponseHelper::errorResponse(
+                401,
+                'Token tidak valid',
+                '/add/new/bus'
+            );
+        }
+
+        $bus = Bus::find($validate['bus_id']);
+        if (!$bus) {
+            return response()->json([
+                'status' => 404,
+                'message' => 'Bus tidak ditemukan',
+                'redirect' => '/add/new/bus'
+            ], 404);
+        }
+
+        DB::beginTransaction();
+
+        try {
+
+            DB::table('pivot_bus_facilities')->insert([
+                'bus_id' => $bus->id,
+                'facilities_id' => $validate['facilities_id'],
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 201,
+                'message' => 'Berhasil menambahkan fasilitas ke dalam bus',
+                'redirect' => '/add/new/bus'
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Gagal menambah fasilitas ke bus',
+                'error' => $e->getMessage(),
+                'redirect' => '/panel'
+            ], 500);
+        }
+    }
+
+    // Delete facilities from bus
+    public function deleteFacilitiesFromBus(Request $request)
+    {
+        // Validate request data
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|exists:pivot_bus_facilities,id'
+        ], [
+            'id.required' => 'ID fasilitas tidak boleh kosong',
+            'id.exists' => 'Fasilitas tidak ditemukan pada bus',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors(),
+                'redirect' => '/add/new/bus'
+            ], 400);
+        }
+
+
+        $validate = $validator->validate();
+        $token = $request->bearerToken();
+
+        $user = User::where('remember_token', $token)->first();
+        if (!$user) {
+            return ResponseHelper::errorResponse(
+                401,
+                'Token tidak valid',
+                '/add/new/bus'
+            );
+        }
+
+        try {
+            DB::table('pivot_bus_facilities')->where('id', $validate['id'])->delete();
+            return response()->json([
+                'status' => 200,
+                'message' => 'Berhasil menghapus fasilitas dari bus',
+                'redirect' => '/dashboard/list/bus'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Gagal menghapus fasilitas dari bus',
+                'error' => $e->getMessage(),
+                'redirect' => '/panel'
+            ], 500);
+        }
+    }
+
     public function create(Request $request)
     {
         // Validate request data
