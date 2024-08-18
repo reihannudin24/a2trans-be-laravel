@@ -167,6 +167,7 @@ class CategoriesController extends Controller
             );
         }
 
+        $validate = $validation->validate();
         $token = $request->bearerToken();
 
         $user = User::where('remember_token', $token)->first();
@@ -208,11 +209,7 @@ class CategoriesController extends Controller
     {
         // Validate input
         $validation = Validator::make($request->all(), [
-            'token' => 'required',
             'id' => 'nullable|exists:categories,id',
-        ], [
-            'token.required' => 'Token tidak boleh kosong',
-            'id.exists' => 'Kategori tidak ditemukan',
         ]);
 
         if ($validation->fails()) {
@@ -223,10 +220,11 @@ class CategoriesController extends Controller
             );
         }
 
-        $validate = $validation->validate();
+        $validated = $validation->validated();
 
         // Verify token
-        $user = User::where('remember_token', $validate['token'])->first();
+        $token = $request->bearerToken();
+        $user = User::where('remember_token', $token)->first();
         if (!$user) {
             return ResponseHelper::errorResponse(
                 401,
@@ -237,8 +235,8 @@ class CategoriesController extends Controller
 
         try {
             $query = Categories::query();
-            if ($validate['id']) {
-                $query->where('id', $validate['id']);
+            if (!empty($validated['id'])) {
+                $query->where('id', $validated['id']);
             }
             $categories = $query->get();
 
@@ -259,4 +257,5 @@ class CategoriesController extends Controller
             );
         }
     }
+
 }
