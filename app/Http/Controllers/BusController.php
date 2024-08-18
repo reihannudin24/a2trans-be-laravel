@@ -380,7 +380,9 @@ class BusController extends Controller
                 $query->where('id', $id);
             }
 
+
             $buses = $query->get()->map(function ($bus) {
+
                 return [
                     'id' => $bus->id,
                     'name' => $bus->name,
@@ -389,7 +391,8 @@ class BusController extends Controller
                     'seat' => $bus->seat,
                     'type' => $bus->type,
                     'categories_id' => $bus->categories_id,
-                    'merek_id' => $bus->merek_id,
+                    'merek_id' => $bus->brand->id,
+                    'merek_name' => $bus->brand->name,
                     'created_at' => $bus->created_at,
                     'category_name' => $bus->category->name,
                     'facilities' => $bus->facilities->map(function ($facility) {

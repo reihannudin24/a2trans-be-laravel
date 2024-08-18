@@ -16,6 +16,12 @@ class Bus extends Model
         return $this->belongsTo(Categories::class, 'categories_id');
     }
 
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
+    }
+
+
     public function facilities()
     {
         return $this->belongsToMany(Facilities::class, 'pivot_bus_facilities', 'bus_id', 'facilities_id');
