@@ -151,10 +151,11 @@ class CategoriesController extends Controller
 
         // Verify token
         $user = User::where('remember_token', $token)->first();
+
         if (!$user) {
             return response()->json([
                 'status' => 401,
-                'message' => 'Token tidak valid',
+                'message' => "Token tidak valid: {$token}",
                 'redirect' => '/login'
             ], 401);
         }
