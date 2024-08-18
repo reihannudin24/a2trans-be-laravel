@@ -5,218 +5,171 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Vendor;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use App\Helpers\ResponseHelper;
 
 class VendorController extends Controller
 {
+    // TODO: CREATE VENDOR === success
     public function create(Request $request)
     {
-        $token = $request->input('token');
-        $name = $request->input('name');
+        // Validate input
+        $validation = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+        ], [
+            'name.required' => 'Nama vendor tidak boleh kosong',
+            'name.string' => 'Nama vendor harus berupa string',
+            'name.max' => 'Nama vendor maksimal 255 karakter',
+        ]);
+
+        if ($validation->fails()) {
+            return ResponseHelper::errorResponse(401, $validation->errors(), '/add/new/vendor');
+        }
+
+        $validate = $validation->validate();
+        $token = $request->bearerToken();
 
         // Verify token
         $user = User::where('remember_token', $token)->first();
         if (!$user) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'User not found',
-                'redirect' => '/login'
-            ], 404);
+            return ResponseHelper::errorResponse(401, 'Token tidak valid', '/add/new/vendor');
         }
 
-        $tokenVerify = $this->checkToken($token);
-        if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token not valid',
-                'redirect' => '/login'
-            ], 401);
-        }
+        DB::beginTransaction();
 
         try {
             $vendor = new Vendor();
-            $vendor->name = $name;
+            $vendor->name = $validate['name'];
+            $vendor->user_id = $user->id; // Associate vendor with the user
             $vendor->save();
 
-            return response()->json([
-                'status' => 201,
-                'message' => 'Berhasil menambahkan vendor',
-                'redirect' => '/panel/list/vendor',
-                'data' => $vendor
-            ], 201);
+            DB::commit();
+
+            return ResponseHelper::successResponse(201, 'Berhasil menambahkan vendor', ['vendor' => $vendor], '/panel/list/vendor');
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Gagal menambahkan vendor',
-                'redirect' => '/panel',
-                'error' => $e->getMessage()
-            ], 500);
+            DB::rollBack();
+            return ResponseHelper::errorResponse(500, 'Gagal menambahkan vendor', '/panel', $e->getMessage());
         }
     }
 
+    // TODO: UPDATE VENDOR === success
     public function update(Request $request)
     {
-        $token = $request->input('token');
-        $id = $request->input('id');
-        $name = $request->input('name');
+        // Validate input
+        $validation = Validator::make($request->all(), [
+            'id' => 'required|exists:vendors,id',
+            'name' => 'required|string|max:255',
+        ], [
+            'id.required' => 'ID vendor tidak boleh kosong',
+            'id.exists' => 'Vendor tidak ditemukan',
+            'name.required' => 'Nama vendor tidak boleh kosong',
+            'name.string' => 'Nama vendor harus berupa string',
+            'name.max' => 'Nama vendor maksimal 255 karakter',
+        ]);
+
+        if ($validation->fails()) {
+            return ResponseHelper::errorResponse(401, $validation->errors(), '/update/vendor');
+        }
+
+        $validate = $validation->validate();
+        $token = $request->bearerToken();
 
         // Verify token
         $user = User::where('remember_token', $token)->first();
         if (!$user) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'User not found',
-                'redirect' => '/login'
-            ], 404);
+            return ResponseHelper::errorResponse(401, 'Token tidak valid', '/update/vendor');
         }
 
-        // Token verification (you should implement this in a helper or service)
-        $tokenVerify = $this->checkToken($token);
-        if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token not valid',
-                'redirect' => '/login'
-            ], 401);
-        }
+        DB::beginTransaction();
 
-        // Update vendor
         try {
-            $vendor = Vendor::find($id);
-            if (!$vendor) {
-                return response()->json([
-                    'status' => 404,
-                    'message' => 'Vendor not found',
-                    'redirect' => '/login'
-                ], 404);
-            }
-            $vendor->name = $name;
-            $vendor->user_id = $user->id;
-            $vendor->save();
 
-            return response()->json([
-                'status' => 200,
-                'message' => 'Berhasil memperbarui vendor',
-                'redirect' => '/panel/list/vendor',
-                'data' => $vendor
-            ], 200);
+
+            Vendor::query()->where('id' ,$validate['id'])->update([
+                'name' => $validate['name']
+            ]);
+            $vendor = Vendor::query()->where('id', $validate['id'])->first();
+
+            DB::commit();
+
+            return ResponseHelper::successResponse(200, 'Berhasil memperbarui vendor', ['vendor' => $vendor], '/panel/list/vendor');
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Gagal memperbarui vendor',
-                'redirect' => '/panel',
-                'error' => $e->getMessage()
-            ], 500);
+            DB::rollBack();
+            return ResponseHelper::errorResponse(500, 'Gagal memperbarui vendor', '/panel', $e->getMessage());
         }
     }
 
+    // TODO: DELETE VENDOR === success
     public function delete(Request $request)
     {
-        $token = $request->input('token');
-        $id = $request->input('id');
+        // Validate input
+        $validation = Validator::make($request->all(), [
+            'id' => 'required|exists:vendors,id',
+        ], [
+            'id.required' => 'ID vendor tidak boleh kosong',
+            'id.exists' => 'Vendor tidak ditemukan',
+        ]);
+
+        if ($validation->fails()) {
+            return ResponseHelper::errorResponse(401, $validation->errors(), '/delete/vendor');
+        }
+
+        $validate = $validation->validate();
+        $token = $request->bearerToken();
 
         // Verify token
         $user = User::where('remember_token', $token)->first();
         if (!$user) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'User not found',
-                'redirect' => '/login'
-            ], 404);
+            return ResponseHelper::errorResponse(401, 'Token tidak valid', '/delete/vendor');
         }
 
-        // Token verification (you should implement this in a helper or service)
-        $tokenVerify = $this->checkToken($token);
-        if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token not valid',
-                'redirect' => '/login'
-            ], 401);
-        }
+        DB::beginTransaction();
 
-        // Delete vendor
         try {
-            $vendor = Vendor::find($id);
-            if (!$vendor) {
-                return response()->json([
-                    'status' => 404,
-                    'message' => 'Vendor not found',
-                    'redirect' => '/panel'
-                ], 404);
-            }
+            $vendor = Vendor::find($validate['id']);
             $vendor->delete();
 
-            return response()->json([
-                'status' => 200,
-                'message' => 'Berhasil menghapus vendor',
-                'redirect' => '/panel/list/vendor'
-            ], 200);
+            DB::commit();
+
+            return ResponseHelper::successResponse(200, 'Berhasil menghapus vendor', null, '/panel/list/vendor');
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Gagal menghapus vendor',
-                'redirect' => '/panel',
-                'error' => $e->getMessage()
-            ], 500);
+            DB::rollBack();
+            return ResponseHelper::errorResponse(500, 'Gagal menghapus vendor', '/panel', $e->getMessage());
         }
     }
 
+    // TODO: SHOW VENDOR === success
     public function show(Request $request)
     {
-        $token = $request->input('token');
-        $id = $request->input('id');
+        // Validate input
+        $validation = Validator::make($request->all(), [
+            'id' => 'nullable|exists:vendors,id',
+        ]);
 
-        // Verify token
-        $tokenVerify = $this->checkToken($token);
-        if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token tidak valid',
-                'redirect' => '/login'
-            ], 401);
+        if ($validation->fails()) {
+            return ResponseHelper::errorResponse(401, $validation->errors(), '/show/vendor');
         }
 
-        // Check if the user exists with the provided token
-        $user = User::where('remember_token', $token)->first();
-        if (!$user) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'Pengguna tidak ditemukan',
-                'redirect' => '/login'
-            ], 404);
-        }
+        $validated = $validation->validated();
+//        $token = $request->bearerToken();
+//
+//        // Verify token
+//        $user = User::where('remember_token', $token)->first();
+//        if (!$user) {
+//            return ResponseHelper::errorResponse(401, 'Token tidak valid', '/login');
+//        }
 
-        // Fetch vendors
         try {
             $query = Vendor::query();
-            if ($id) {
-                $query->where('id', $id);
+            if (!empty($validated['id'])) {
+                $query->where('id', $validated['id']);
             }
             $vendors = $query->get();
 
-            return response()->json([
-                'status' => 200,
-                'message' => 'Vendor berhasil ditampilkan',
-                'redirect' => '/panel/list/facilities',
-                'data' => $vendors
-            ], 200);
+            return ResponseHelper::successResponse(200, 'Vendor berhasil ditampilkan', ['vendors' => $vendors], '/panel/list/facilities');
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Gagal menampilkan vendor',
-                'redirect' => '/panel',
-                'error' => $e->getMessage()
-            ], 500);
+            return ResponseHelper::errorResponse(500, 'Gagal menampilkan vendor', '/panel', $e->getMessage());
         }
-    }
-
-    private function checkToken($token)
-    {
-        // Implement your token verification logic here
-        // For example, check if the token is valid or expired
-        // Return an array like ['valid' => true/false]
-
-        // Dummy implementation for illustration
-        return ['valid' => true];
     }
 }
