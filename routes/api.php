@@ -70,7 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('brand')->controller(BrandController::class)->group(function () {
-        Route::post('/add/new', 'createNew');
+        Route::post('/add/new', 'create');
         Route::put('/update', 'update');
         Route::delete('/delete', 'delete');
     });

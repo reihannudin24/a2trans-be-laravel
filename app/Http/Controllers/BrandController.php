@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ResponseHelper;
 use App\Models\Brand;
 use App\Models\Vendor;
 use Illuminate\Http\Request;
@@ -197,11 +198,16 @@ class BrandController extends Controller
                 ], 404);
             }
 
-            return response()->json([
-                'status' => 200,
-                'message' => 'Berhasil menampilkan brand',
-                'data' => $brand
-            ], 200);
+            return ResponseHelper::successResponse(
+                200,
+                'Berhasil menampilkan brand',
+                [
+                    'brand' => $brand
+                ],
+                '/panel/list/brand'
+            );
+
+
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,

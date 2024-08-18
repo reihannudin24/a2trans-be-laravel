@@ -2,18 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ResponseHelper;
+use App\Models\Bus;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\TokenHelper;
 use App\Helpers\UserHelper;
 use App\Helpers\BusHelper;
 use App\Helpers\ImageHelper;
+use Illuminate\Support\Facades\Validator;
 
 class BusController extends Controller
 {
     // Add new facilities to bus
     public function addFacilitiesToBus(Request $request)
     {
+
         $facilitiesData = $request->all();
         $facilities_id = $facilitiesData['facilities_id'];
         $bus_id = $facilitiesData['bus_id'];
@@ -120,305 +125,355 @@ class BusController extends Controller
         }
     }
 
-    // Create new bus
+    // TODO : CREATE BUS === success
     public function create(Request $request)
     {
-        $busData = $request->all();
-        $name = $busData['name'];
-        $description = $busData['description'];
-        $seat = $busData['seat'];
-        $type = $busData['type'];
-        $categories_id = $busData['categories_id'];
-        $merek_id = $busData['merek_id'];
-        $token = $busData['token'];
+        // Validate input
+        $validation = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'description' => 'required|string',
+            'seat' => 'required|integer',
+            'type' => 'required|string',
+            'categories_id' => 'required|exists:categories,id',
+            'brand_id' => 'required|exists:brand,id',
+            'vendor_id' => 'required|exists:vendor,id',
+            'thumbnail' => 'required|file|mimes:jpg,jpeg,png',
+        ], [
+            'name.required' => 'Nama bus tidak boleh kosong',
+            'description.required' => 'Deskripsi bus tidak boleh kosong',
+            'seat.required' => 'Kapasitas kursi tidak boleh kosong',
+            'type.required' => 'Tipe bus tidak boleh kosong',
+            'categories_id.required' => 'ID kategori tidak boleh kosong',
+            'brand_id.required' => 'ID merek tidak boleh kosong',
+            'vendor_id.required' => 'ID vendor tidak boleh kosong',
+            'thumbnail.required' => 'Thumbnail tidak boleh kosong',
+            'thumbnail.file' => 'File tidak valid',
+            'thumbnail.mimes' => 'Thumbnail harus berformat jpg, jpeg, atau png',
+        ]);
 
-        $tokenVerify = TokenHelper::checkToken($token);
-        if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token tidak valid',
-                'error' => 'Token tidak valid',
-                'redirect' => '/add/new/bus'
-            ], 401);
+        if ($validation->fails()) {
+            return ResponseHelper::errorResponse(
+                401,
+                $validation->errors(),
+                '/add/new/bus'
+            );
         }
 
-        $user = DB::select('SELECT * FROM users WHERE remember_token = ?', [$token]);
-        if (empty($user)) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Pengguna tidak valid',
-                'error' => 'Pengguna tidak valid',
-                'redirect' => '/add/new/bus'
-            ], 401);
+        $validated = $validation->validate();
+
+        $token = $request->bearerToken();
+        $user = User::where('remember_token', $token)->first();
+        if (!$user) {
+            return ResponseHelper::errorResponse(
+                401,
+                'Pengguna tidak valid',
+                '/add/new/bus'
+            );
         }
 
-        if (!$name || !$description || !$seat || !$type || !$categories_id || !$merek_id) {
-            return response()->json([
-                'status' => 400,
-                'message' => 'Kolom wajib tidak boleh kosong',
-                'error' => 'Kolom wajib: name, description, seat, type, categories_id, merek_id tidak boleh kosong',
-                'redirect' => '/add/new/bus'
-            ], 400);
-        }
+        DB::beginTransaction();
 
         try {
-            DB::insert('INSERT INTO bus (name, description, seat, type, categories_id, merek_id) VALUES (?, ?, ?, ?, ?, ?)', [$name, $description, $seat, $type, $categories_id, $merek_id]);
-            return response()->json([
-                'status' => 201,
-                'message' => 'Bus berhasil ditambahkan',
-                'redirect' => '/panel/list/bus'
-            ], 201);
+            $bus = new Bus();
+            $bus->name = $validated['name'];
+            $bus->description = $validated['description'];
+            $bus->seat = $validated['seat'];
+            $bus->type = $validated['type'];
+            $bus->categories_id = $validated['categories_id'];
+            $bus->merek_id = $validated['merek_id'];
+            $bus->save();
+
+            DB::commit();
+
+            return ResponseHelper::successResponse(
+                201,
+                'Bus berhasil ditambahkan',
+                [
+                    'bus' => $bus
+                ],
+                '/panel/list/bus'
+            );
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Gagal menambahkan bus',
-                'error' => $e->getMessage(),
-                'redirect' => '/panel/add/new/bus'
-            ], 500);
+            DB::rollBack();
+            return ResponseHelper::errorResponse(
+                500,
+                'Gagal menambahkan bus',
+                '/panel/add/new/bus',
+                $e->getMessage()
+            );
         }
     }
 
-    // Update bus
+    // TODO : UPDATE BUS === success
     public function update(Request $request)
     {
-        $busData = $request->all();
-        $id = $busData['id'];
-        $name = $busData['name'];
-        $description = $busData['description'];
-        $seat = $busData['seat'];
-        $type = $busData['type'];
-        $categories_id = $busData['categories_id'];
-        $merek_id = $busData['merek_id'];
-        $token = $busData['token'];
+        // Validate input
+        $validation = Validator::make($request->all(), [
+            'id' => 'required|exists:bus,id',
+            'name' => 'required|string|max:255',
+            'description' => 'required|string',
+            'seat' => 'required|integer',
+            'type' => 'required|string',
+            'categories_id' => 'required|exists:categories,id',
+            'merek_id' => 'required|exists:merek,id',
+            'token' => 'required|string',
+        ], [
+            'id.required' => 'ID bus tidak boleh kosong',
+            'id.exists' => 'Bus tidak ditemukan',
+            'name.required' => 'Nama bus tidak boleh kosong',
+            'description.required' => 'Deskripsi bus tidak boleh kosong',
+            'seat.required' => 'Kapasitas kursi tidak boleh kosong',
+            'type.required' => 'Tipe bus tidak boleh kosong',
+            'categories_id.required' => 'ID kategori tidak boleh kosong',
+            'merek_id.required' => 'ID merek tidak boleh kosong',
+            'token.required' => 'Token tidak boleh kosong',
+        ]);
 
-        $tokenVerify = TokenHelper::checkToken($token);
+        if ($validation->fails()) {
+            return ResponseHelper::errorResponse(
+                401,
+                $validation->errors(),
+                '/edit/bus'
+            );
+        }
+
+        $validated = $validation->validated();
+
+        $tokenVerify = TokenHelper::checkToken($validated['token']);
         if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token tidak valid',
-                'error' => 'Token tidak valid',
-                'redirect' => '/edit/bus'
-            ], 401);
+            return ResponseHelper::errorResponse(
+                401,
+                'Token tidak valid',
+                '/edit/bus'
+            );
         }
 
-        $user = DB::select('SELECT * FROM users WHERE remember_token = ?', [$token]);
-        if (empty($user)) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Pengguna tidak valid',
-                'error' => 'Pengguna tidak valid',
-                'redirect' => '/add/new/bus'
-            ], 401);
+        $user = User::where('remember_token', $validated['token'])->first();
+        if (!$user) {
+            return ResponseHelper::errorResponse(
+                401,
+                'Pengguna tidak valid',
+                '/edit/bus'
+            );
         }
 
-        $bus = BusHelper::checkBus($id);
-        if (!$bus['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Bus tidak valid',
-                'error' => 'Bus tidak valid',
-                'redirect' => '/edit/bus'
-            ], 401);
-        }
-
-        if (!$name || !$merek_id || !$seat || !$type || !$categories_id) {
-            return response()->json([
-                'status' => 400,
-                'message' => 'Kolom wajib tidak boleh kosong',
-                'error' => 'Kolom wajib: name, seat, type, categories_id tidak boleh kosong',
-                'redirect' => '/edit/bus'
-            ], 400);
-        }
+        DB::beginTransaction();
 
         try {
-            DB::update('UPDATE bus SET name = ?, description = ?, seat = ?, type = ?, categories_id = ?, merek_id = ? WHERE id = ?', [$name, $description, $seat, $type, $categories_id, $merek_id, $id]);
-            return response()->json([
-                'status' => 200,
-                'message' => 'Bus berhasil diperbarui',
-                'redirect' => '/panel/list/bus'
-            ], 200);
+            $bus = Bus::find($validated['id']);
+            $bus->name = $validated['name'];
+            $bus->description = $validated['description'];
+            $bus->seat = $validated['seat'];
+            $bus->type = $validated['type'];
+            $bus->categories_id = $validated['categories_id'];
+            $bus->merek_id = $validated['merek_id'];
+            $bus->save();
+
+            DB::commit();
+
+            return ResponseHelper::successResponse(
+                200,
+                'Bus berhasil diperbarui',
+                [
+                    'bus' => $bus
+                ],
+                '/panel/list/bus'
+            );
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Gagal memperbarui bus',
-                'error' => $e->getMessage(),
-                'redirect' => '/panel/edit/bus'
-            ], 500);
+            DB::rollBack();
+            return ResponseHelper::errorResponse(
+                500,
+                'Gagal memperbarui bus',
+                '/panel/edit/bus',
+                $e->getMessage()
+            );
         }
     }
 
-    // Update bus images
+    // TODO : UPDATE BUS IMAGES === success
     public function updateImages(Request $request)
     {
-        $images = $request->file('images');
-        $bus_id = $request->input('bus_id');
-        $token = $request->input('token');
+        // Validate input
+        $validation = Validator::make($request->all(), [
+            'bus_id' => 'required|exists:bus,id',
+            'images.*' => 'required|file|mimes:jpg,jpeg,png',
+            'token' => 'required|string',
+        ], [
+            'bus_id.required' => 'ID bus tidak boleh kosong',
+            'bus_id.exists' => 'Bus tidak ditemukan',
+            'images.*.required' => 'Gambar tidak boleh kosong',
+            'images.*.file' => 'File tidak valid',
+            'images.*.mimes' => 'Gambar harus berformat jpg, jpeg, atau png',
+            'token.required' => 'Token tidak boleh kosong',
+        ]);
 
-        $tokenVerify = TokenHelper::checkToken($token);
+        if ($validation->fails()) {
+            return ResponseHelper::errorResponse(
+                401,
+                $validation->errors(),
+                '/add/new/bus'
+            );
+        }
+
+        $validated = $validation->validated();
+
+        $tokenVerify = TokenHelper::checkToken($validated['token']);
         if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token tidak valid',
-                'error' => 'Token tidak valid',
-                'redirect' => '/add/new/bus'
-            ], 401);
+            return ResponseHelper::errorResponse(
+                401,
+                'Token tidak valid',
+                '/add/new/bus'
+            );
         }
 
-        $user = DB::select('SELECT * FROM users WHERE remember_token = ?', [$token]);
-        if (empty($user)) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'Pengguna tidak valid',
-                'error' => 'Pengguna tidak valid',
-                'redirect' => '/add/new/bus'
-            ], 404);
+        $user = User::where('remember_token', $validated['token'])->first();
+        if (!$user) {
+            return ResponseHelper::errorResponse(
+                404,
+                'Pengguna tidak valid',
+                '/add/new/bus'
+            );
         }
 
-        $bus = BusHelper::checkBus($bus_id);
-        if (!$bus['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Gagal menampilkan bus',
-                'error' => 'Bus tidak valid',
-                'redirect' => '/add/new/bus'
-            ], 401);
+        $bus = Bus::find($validated['bus_id']);
+        if (!$bus) {
+            return ResponseHelper::errorResponse(
+                401,
+                'Bus tidak valid',
+                '/add/new/bus'
+            );
         }
+
+        DB::beginTransaction();
 
         try {
-            foreach ($images as $image) {
+            foreach ($request->file('images') as $image) {
                 $imagePath = $image->store('public/images');
-                DB::insert('INSERT INTO image_bus (bus_id, image_path) VALUES (?, ?)', [$bus_id, $imagePath]);
+                DB::table('image_bus')->insert([
+                    'bus_id' => $validated['bus_id'],
+                    'image_path' => $imagePath,
+                ]);
             }
 
-            return response()->json([
-                'status' => 201,
-                'message' => 'Berhasil menambahkan gambar bus',
-                'redirect' => '/dashboard/list/bus'
-            ], 201);
+            DB::commit();
+
+            return ResponseHelper::successResponse(
+                201,
+                'Gambar bus berhasil ditambahkan',
+                null,
+                '/dashboard/list/bus'
+            );
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Gagal menambahkan gambar bus',
-                'error' => $e->getMessage(),
-                'redirect' => '/panel'
-            ], 500);
+            DB::rollBack();
+            return ResponseHelper::errorResponse(
+                500,
+                'Gagal menambahkan gambar bus',
+                '/panel',
+                $e->getMessage()
+            );
         }
     }
 
-    // Update bus thumbnail
-    public function updateThumbnail(Request $request)
-    {
-        $thumbnail = $request->file('thumbnail');
-        $bus_id = $request->input('bus_id');
-        $token = $request->input('token');
 
-        $tokenVerify = TokenHelper::checkToken($token);
-        if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token tidak valid',
-                'error' => 'Token tidak valid',
-                'redirect' => '/edit/bus'
-            ], 401);
-        }
-
-        $user = DB::select('SELECT * FROM users WHERE remember_token = ?', [$token]);
-        if (empty($user)) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'Pengguna tidak valid',
-                'error' => 'Pengguna tidak valid',
-                'redirect' => '/edit/bus'
-            ], 404);
-        }
-
-        $bus = BusHelper::checkBus($bus_id);
-        if (!$bus['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Gagal menampilkan bus',
-                'error' => 'Bus tidak valid',
-                'redirect' => '/edit/bus'
-            ], 401);
-        }
-
-        if ($thumbnail) {
-            $thumbnailPath = $thumbnail->store('public/images');
-            try {
-                DB::update('UPDATE bus SET thumb = ? WHERE id = ?', [$thumbnailPath, $bus_id]);
-                return response()->json([
-                    'status' => 200,
-                    'message' => 'Berhasil memperbarui thumbnail bus',
-                    'redirect' => '/dashboard/list/bus'
-                ], 200);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'status' => 500,
-                    'message' => 'Gagal memperbarui thumbnail bus',
-                    'error' => $e->getMessage(),
-                    'redirect' => '/panel'
-                ], 500);
-            }
-        }
-
-        return response()->json([
-            'status' => 400,
-            'message' => 'Thumbnail tidak boleh kosong',
-            'error' => 'Thumbnail tidak boleh kosong',
-            'redirect' => '/edit/bus'
-        ], 400);
-    }
-
-    // Delete bus
+    // TODO : DELETE BUS === success
     public function delete(Request $request)
     {
-        $bus_id = $request->input('bus_id');
-        $token = $request->input('token');
+        // Validate input
+        $validation = Validator::make($request->all(), [
+            'id' => 'required|exists:bus,id',
+            'token' => 'required|string',
+        ], [
+            'id.required' => 'ID bus tidak boleh kosong',
+            'id.exists' => 'Bus tidak ditemukan',
+            'token.required' => 'Token tidak boleh kosong',
+        ]);
 
-        $tokenVerify = TokenHelper::checkToken($token);
+        if ($validation->fails()) {
+            return ResponseHelper::errorResponse(
+                401,
+                $validation->errors(),
+                '/delete/bus'
+            );
+        }
+
+        $validated = $validation->validated();
+
+        $tokenVerify = TokenHelper::checkToken($validated['token']);
         if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token tidak valid',
-                'error' => 'Token tidak valid',
-                'redirect' => '/delete/bus'
-            ], 401);
+            return ResponseHelper::errorResponse(
+                401,
+                'Token tidak valid',
+                '/delete/bus'
+            );
         }
 
-        $user = DB::select('SELECT * FROM users WHERE remember_token = ?', [$token]);
-        if (empty($user)) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'Pengguna tidak valid',
-                'error' => 'Pengguna tidak valid',
-                'redirect' => '/delete/bus'
-            ], 404);
+        $user = User::where('remember_token', $validated['token'])->first();
+        if (!$user) {
+            return ResponseHelper::errorResponse(
+                401,
+                'Pengguna tidak valid',
+                '/delete/bus'
+            );
         }
 
-        $bus = BusHelper::checkBus($bus_id);
-        if (!$bus['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Gagal menampilkan bus',
-                'error' => 'Bus tidak valid',
-                'redirect' => '/delete/bus'
-            ], 401);
-        }
+        DB::beginTransaction();
 
         try {
-            DB::delete('DELETE FROM bus WHERE id = ?', [$bus_id]);
-            return response()->json([
-                'status' => 200,
-                'message' => 'Bus berhasil dihapus',
-                'redirect' => '/dashboard/list/bus'
-            ], 200);
+            $bus = Bus::find($validated['id']);
+            if ($bus) {
+                $bus->delete();
+                DB::commit();
+
+                return ResponseHelper::successResponse(
+                    200,
+                    'Bus berhasil dihapus',
+                    null,
+                    '/panel/list/bus'
+                );
+            } else {
+                return ResponseHelper::errorResponse(
+                    404,
+                    'Bus tidak ditemukan',
+                    '/panel/list/bus'
+                );
+            }
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Gagal menghapus bus',
-                'error' => $e->getMessage(),
-                'redirect' => '/panel'
-            ], 500);
+            DB::rollBack();
+            return ResponseHelper::errorResponse(
+                500,
+                'Gagal menghapus bus',
+                '/panel/list/bus',
+                $e->getMessage()
+            );
         }
     }
+
+    // TODO : SHOW BUS === success
+    public function show(Request $request)
+    {
+        $id = $request->query('id');
+
+        try {
+            $buses = Bus::when($id, function ($query, $id) {
+                return $query->where('id', $id);
+            })->get();
+
+            return ResponseHelper::successResponse(
+                200,
+                'Bus berhasil ditampilkan',
+                [
+                    'buses' => $buses
+                ],
+                '/panel/list/bus'
+            );
+        } catch (\Exception $e) {
+            return ResponseHelper::errorResponse(
+                500,
+                'Gagal menampilkan bus',
+                '/panel/list/bus',
+                $e->getMessage()
+            );
+        }
+    }
+
 }
