@@ -44,7 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('categories')->controller(CategoriesController::class)->group(function () {
-        Route::post('/create/new', 'createNew');
+        Route::post('/add/new', 'create');
         Route::post('/add/new/image', 'addNewImage');
         Route::put('/update', 'update');
         Route::delete('/delete', 'delete');

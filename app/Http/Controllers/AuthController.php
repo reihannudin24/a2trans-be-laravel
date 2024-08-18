@@ -161,8 +161,6 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
 
-
-
         $validation = Validator::make($request->all(), [
             'email' => 'required|email'
         ], [
