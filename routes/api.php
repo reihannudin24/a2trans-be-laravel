@@ -58,7 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('vendor')->controller(VendorController::class)->group(function () {
-        Route::post('/create/new', 'createNew');
+        Route::post('/create/new', 'create');
         Route::put('/update', 'update');
         Route::delete('/delete', 'delete');
     });

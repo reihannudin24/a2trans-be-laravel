@@ -151,6 +151,7 @@ class CategoriesController extends Controller
     // TODO : DELETE CATEGORY === success
     public function delete(Request $request)
     {
+
         // Validate input
         $validation = Validator::make($request->all(), [
             'id' => 'required|exists:categories,id',
@@ -207,15 +208,25 @@ class CategoriesController extends Controller
     // TODO : SHOW CATEGORY === success
     public function show(Request $request)
     {
-        // Validate input
-        $validation = Validator::make($request->all(), [
-            'id' => 'nullable|exists:categories,id',
-        ]);
+
+        // Get the 'id' from the query parameter
+        $id = $request->query('id');
+//
+//        // Verify token
+//        $token = $request->bearerToken();
+//        $user = User::where('remember_token', $token)->first();
+//        if (!$user) {
+//            return ResponseHelper::errorResponse(
+//                401,
+//                'Token tidak valid',
+//                '/login'
+//            );
+//        }
 
         try {
             $query = Categories::query();
-            if (!empty($validated['id'])) {
-                $query->where('id', $validated['id']);
+            if (!empty($id)) {
+                $query->where('id', $id);
             }
             $categories = $query->get();
 

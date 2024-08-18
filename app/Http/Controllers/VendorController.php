@@ -75,17 +75,13 @@ class VendorController extends Controller
         $validate = $validation->validate();
         $token = $request->bearerToken();
 
-        // Verify token
         $user = User::where('remember_token', $token)->first();
         if (!$user) {
             return ResponseHelper::errorResponse(401, 'Token tidak valid', '/update/vendor');
         }
 
         DB::beginTransaction();
-
         try {
-
-
             Vendor::query()->where('id' ,$validate['id'])->update([
                 'name' => $validate['name']
             ]);
