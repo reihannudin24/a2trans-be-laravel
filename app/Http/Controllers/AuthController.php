@@ -2,24 +2,42 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ResponseHelper;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
-    // Handle user registration
+    // TODO : ADD NEW USER === success
     public function addNewUser(Request $request)
     {
-        $request->validate([
+        $validation = Validator::make($request->all(), [
             'email' => 'required|email|unique:users,email',
             'username' => 'required|string|max:255',
             'password' => 'required|string|min:6',
             'role' => 'required|string'
+        ], [
+            'email.required' => 'Email tidak boleh kosong',
+            'email.email' => 'Format email tidak valid',
+            'email.unique' => 'Email telah terdaftar',
+            'username.required' => 'Username tidak boleh kosong',
+            'password.required' => 'Password tidak boleh kosong',
+            'password.min' => 'Password harus minimal 6 karakter',
+            'role.required' => 'Role tidak boleh kosong'
         ]);
+
+        if ($validation->fails()) {
+            return ResponseHelper::errorResponse(
+                401,
+                $validation->errors(),
+                '/add/new/account'
+            );
+        }
 
         DB::beginTransaction();
 
@@ -35,96 +53,128 @@ class AuthController extends Controller
             ]);
 
             DB::commit();
-            return response()->json([
-                'status' => 201,
-                'message' => 'Berhasil menambahkan pengguna',
-                'data' => [
+
+            return ResponseHelper::successResponse(
+                201,
+                'Berhasil menambahkan pengguna',
+                [
                     'user' => [
                         'email' => $user->email,
                         'id' => $user->id
                     ]
                 ],
-                'redirect' => '/panel'
-            ], 201);
+                '/panel'
+            );
 
         } catch (\Exception $e) {
             DB::rollBack();
-            if ($e->getCode() === '23000') {
-                return response()->json([
-                    'status' => 401,
-                    'message' => 'Email telah terdaftar',
-                    'redirect' => '/add/new/account'
-                ], 401);
-            }
-            return response()->json([
-                'status' => 500,
-                'message' => $e->getMessage(),
-                'redirect' => '/panel'
-            ], 500);
+            return ResponseHelper::errorResponse(
+                500,
+                $e->getMessage(),
+                '/add/new/account'
+            );
         }
     }
 
-    // Handle user login
+    // TODO : LOGIN === success
     public function login(Request $request)
     {
-        $credentials = $request->only('email', 'password');
+        $validation = Validator::make($request->all() , [
+            'email' => 'required|email',
+            'password' => 'required'
+        ] , [
+            'email.required' => 'Email tidak boleh kosong',
+            'email.email' => 'Format email tidak valid',
+            'password.required' => 'Password tidak boleh kosong'
+        ]);
+
+        if ($validation->fails()){
+            return ResponseHelper::errorResponse(
+                401,
+                $validation->errors(),
+                '/login'
+            );
+        }
 
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Email atau password tidak valid',
-                'redirect' => '/login'
-            ], 401);
+            return ResponseHelper::errorResponse(
+                401,
+                'Email atau password tidak valid',
+                '/login'
+            );
         }
 
         DB::beginTransaction();
 
         try {
-            $token = Auth::login($user);
+            // Generate token
+            $token = $user->createToken('API Token for ' . $user->email)->plainTextToken;
+
+            if (!$token) {
+                DB::rollBack();
+                return ResponseHelper::errorResponse(
+                    500,
+                    'Gagal menghasilkan token',
+                    '/login'
+                );
+            }
 
             Cookie::queue('auth_token', $token, 60 * 24, null, null, false, true);
 
             DB::commit();
-            return response()->json([
-                'status' => 201,
-                'message' => 'Berhasil login',
-                'data' => [
+
+            return ResponseHelper::successResponse(
+                200,
+                'Berhasil login',
+                [
                     'user' => [
                         'email' => $user->email,
                         'token' => $token,
                         'id' => $user->id
                     ]
                 ],
-                'redirect' => '/panel'
-            ], 201);
+                '/panel'
+            );
         } catch (\Exception $error) {
             DB::rollBack();
-            return response()->json([
-                'status' => 500,
-                'message' => $error->getMessage(),
-                'redirect' => '/panel'
-            ], 500);
+            return ResponseHelper::errorResponse(
+                500,
+                $error->getMessage(),
+                '/login'
+            );
         }
     }
 
-    // Handle user logout
+
+    // TODO : LOGOUT === success
     public function logout(Request $request)
     {
-        $request->validate([
+        $validation = Validator::make($request->all(), [
             'email' => 'required|email'
+        ], [
+            'email.required' => 'Email tidak boleh kosong',
+            'email.email' => 'Format email tidak valid'
         ]);
+
+        if ($validation->fails()) {
+            return ResponseHelper::errorResponse(
+                401,
+                $validation->errors(),
+                '/login'
+            );
+        }
 
         $token = $request->bearerToken();
         $user = User::where('email', $request->email)->first();
 
         if (!$user || $user->remember_token !== $token) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'User not found or token mismatch',
-                'redirect' => '/login'
-            ], 404);
+            return ResponseHelper::errorResponse(
+                404,
+                'Pengguna tidak ditemukan atau token tidak sesuai',
+                '/login'
+            );
         }
 
         DB::beginTransaction();
@@ -134,18 +184,21 @@ class AuthController extends Controller
             Cookie::queue(Cookie::forget('auth_token'));
 
             DB::commit();
-            return response()->json([
-                'status' => 201,
-                'message' => 'Berhasil logout',
-                'redirect' => '/login'
-            ], 201);
+
+            return ResponseHelper::successResponse(
+                201,
+                'Berhasil logout',
+                null,
+                '/login'
+            );
         } catch (\Exception $error) {
             DB::rollBack();
-            return response()->json([
-                'status' => 500,
-                'message' => $error->getMessage(),
-                'redirect' => '/panel'
-            ], 500);
+            return ResponseHelper::errorResponse(
+                500,
+                $error->getMessage(),
+                '/panel'
+            );
         }
     }
+
 }

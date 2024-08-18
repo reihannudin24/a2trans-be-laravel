@@ -17,6 +17,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::prefix('auth')->controller(AuthController::class)->group(function () {
     Route::post('/login', 'login');
+    Route::post('/add/new/user', 'addNewUser');
+
 });
 
 Route::prefix('categories')->controller(CategoriesController::class)->group(function () {
@@ -39,7 +41,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('auth')->controller(AuthController::class)->group(function () {
         Route::post('/logout', 'logout');
-        Route::post('/add/new/user', 'addNewUser');
     });
 
     Route::prefix('categories')->controller(CategoriesController::class)->group(function () {
