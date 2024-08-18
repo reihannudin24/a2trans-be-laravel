@@ -98,12 +98,20 @@ class FacilitiesController extends Controller
 
     public function delete(Request $request)
     {
-        $token = $request->input('token');
-        $id = $request->input('id');
-
-        // Verify token
-        $user = User::where('remember_token', $token)->first();
+        $userReqId = $request->user()->id;
+        $user = User::find($userReqId);
         if (!$user) {
+            return response()->json([
+                'status' => 404,
+                'message' => 'Pengguna tidak ditemukan',
+                'redirect' => '/login'
+            ], 404);
+        }
+
+        $token = $request->bearerToken(); // Get the token from the Authorization header
+
+        // Verify the token
+        if ($user->remember_token !== $token) {
             return response()->json([
                 'status' => 401,
                 'message' => 'Token tidak valid',
@@ -111,7 +119,8 @@ class FacilitiesController extends Controller
             ], 401);
         }
 
-        // Delete facility
+        $id = $request->input('id');
+
         try {
             $facility = Facilities::find($id);
             if (!$facility) {
@@ -121,6 +130,7 @@ class FacilitiesController extends Controller
                     'redirect' => '/panel'
                 ], 404);
             }
+
             $facility->delete();
 
             return response()->json([

@@ -68,6 +68,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/delete', 'delete');
     });
 
+
+    Route::prefix('image_bus')->controller(ImageBusController::class)->group(function () {
+        Route::post('/create/new', 'createNew');
+        Route::delete('/delete', 'delete');
+        Route::get('/show', 'show');
+    });
+
+
 });
 
 Route::prefix('bus')->controller(BusController::class)->group(function () {
@@ -84,11 +92,6 @@ Route::prefix('bus')->controller(BusController::class)->group(function () {
 
 
 
-Route::prefix('image_bus')->controller(ImageBusController::class)->group(function () {
-    Route::post('/create/new', 'createNew');
-    Route::delete('/delete', 'delete');
-    Route::get('/show', 'show');
-});
 
 Route::prefix('user')->controller(UserController::class)->group(function () {
     Route::get('/show', 'show');
