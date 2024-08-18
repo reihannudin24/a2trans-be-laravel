@@ -208,7 +208,6 @@ class CategoriesController extends Controller
     // TODO : SHOW CATEGORY === success
     public function show(Request $request)
     {
-
         // Get the 'id' from the query parameter
         $id = $request->query('id');
 
