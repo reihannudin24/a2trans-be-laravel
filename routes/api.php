@@ -21,7 +21,7 @@ Route::prefix('auth')->controller(AuthController::class)->group(function () {
 });
 
 Route::prefix('bus')->controller(BusController::class)->group(function () {
-    Route::get('/show', 'showBus');
+    Route::get('/show', 'show');
 });
 
 

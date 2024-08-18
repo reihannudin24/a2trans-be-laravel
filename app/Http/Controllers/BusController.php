@@ -474,14 +474,76 @@ class BusController extends Controller
 
 
     // TODO : SHOW BUS === success
+//    public function show(Request $request)
+//    {
+//        $id = $request->query('id');
+//        try {
+//            $buses = Bus::when($id, function ($query, $id) {
+//                return $query->where('id', $id);
+//            })->get();
+//
+//            return ResponseHelper::successResponse(
+//                200,
+//                'Bus berhasil ditampilkan',
+//                [
+//                    'buses' => $buses
+//                ],
+//                '/panel/list/bus'
+//            );
+//        } catch (\Exception $e) {
+//            return ResponseHelper::errorResponse(
+//                500,
+//                'Gagal menampilkan bus',
+//                '/panel/list/bus',
+//                $e->getMessage()
+//            );
+//        }
+//    }
+
     public function show(Request $request)
     {
         $id = $request->query('id');
 
+
         try {
-            $buses = Bus::when($id, function ($query, $id) {
-                return $query->where('id', $id);
-            })->get();
+            // Query untuk mengambil data bus beserta relasinya
+            $query = Bus::with([
+                'category',
+                'facilities',
+                'images'
+            ]);
+
+            // Jika ada ID bus, tambahkan kondisi ke query
+            if ($id) {
+                $query->where('id', $id);
+            }
+
+            $buses = $query->get()->map(function ($bus) {
+                return [
+                    'id' => $bus->id,
+                    'name' => $bus->name,
+                    'description' => $bus->description,
+                    'thumb' => $bus->thumb,
+                    'seat' => $bus->seat,
+                    'type' => $bus->type,
+                    'categories_id' => $bus->categories_id,
+                    'merek_id' => $bus->merek_id,
+                    'created_at' => $bus->created_at,
+                    'category_name' => $bus->category->name,
+                    'facilities' => $bus->facilities->map(function ($facility) {
+                        return [
+                            'facility_id' => $facility->id,
+                            'facility_name' => $facility->name,
+                        ];
+                    }),
+                    'images' => $bus->images->map(function ($image) {
+                        return [
+                            'image_id' => $image->id,
+                            'image_path' => $image->image,
+                        ];
+                    }),
+                ];
+            });
 
             return ResponseHelper::successResponse(
                 200,
@@ -492,6 +554,8 @@ class BusController extends Controller
                 '/panel/list/bus'
             );
         } catch (\Exception $e) {
+
+            dd($e);
             return ResponseHelper::errorResponse(
                 500,
                 'Gagal menampilkan bus',
@@ -500,5 +564,6 @@ class BusController extends Controller
             );
         }
     }
+
 
 }
