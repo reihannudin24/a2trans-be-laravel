@@ -59,7 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/delete/facilities', 'deleteFacilities');
         Route::post('/add/new', 'create');
         Route::post('/update', 'update');
-        Route::delete('/delete', 'deleteBus');
+        Route::post('/delete', 'delete');
     });
 
 
