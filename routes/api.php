@@ -19,11 +19,27 @@ Route::prefix('auth')->controller(AuthController::class)->group(function () {
     Route::post('/login', 'login');
 });
 
+Route::prefix('categories')->controller(CategoriesController::class)->group(function () {
+    Route::get('/show', 'show');
+});
+
+
 Route::middleware('auth:sanctum')->group(function () {
+
     Route::prefix('auth')->controller(AuthController::class)->group(function () {
         Route::post('/logout', 'logout');
         Route::post('/add/new/user', 'addNewUser');
     });
+
+    Route::prefix('categories')->controller(CategoriesController::class)->group(function () {
+        Route::post('/create/new', 'createNew');
+        Route::post('/add/new/image', 'addNewImage');
+        Route::put('/update', 'update');
+        Route::delete('/delete', 'delete');
+    });
+
+
+
 });
 
 Route::prefix('bus')->controller(BusController::class)->group(function () {
@@ -37,13 +53,6 @@ Route::prefix('bus')->controller(BusController::class)->group(function () {
     Route::get('/show', 'showBus');
 });
 
-Route::prefix('categories')->controller(CategoriesController::class)->group(function () {
-    Route::post('/create/new', 'createNew');
-    Route::post('/add/new/image', 'addNewImage');
-    Route::put('/update', 'update');
-    Route::delete('/delete', 'delete');
-    Route::get('/show', 'show');
-});
 
 Route::prefix('facilities')->controller(FacilitiesController::class)->group(function () {
     Route::post('/create/new', 'createNew');
