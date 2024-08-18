@@ -239,6 +239,14 @@ class BusController extends Controller
         try {
             $bus = Bus::find($validated['id']);
 
+            if (!$bus) {
+                return ResponseHelper::errorResponse(
+                    404,
+                    'Bus tidak ditemukan',
+                    '/edit/bus'
+                );
+            }
+
             if (!$request->hasFile('thumbnail')) {
                 return ResponseHelper::errorResponse(
                     401,

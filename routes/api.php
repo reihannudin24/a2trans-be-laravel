@@ -69,7 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('facilities')->controller(FacilitiesController::class)->group(function () {
         Route::post('/add/new/facilities', 'addFacilitiesToBus');
         Route::delete('/delete/facilities', 'deleteFacilitiesFromBus');
-        Route::post('/add/new', 'createNew');
+        Route::post('/add/new', 'create');
         Route::post('/add/new/image', 'addNewImage');
         Route::put('/update', 'update');
         Route::delete('/delete', 'delete');
