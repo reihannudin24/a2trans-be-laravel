@@ -6,181 +6,235 @@ use Illuminate\Http\Request;
 use App\Models\Categories;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use App\Helpers\ResponseHelper;
 
 class CategoriesController extends Controller
 {
+    // TODO : CREATE CATEGORY === success
     public function create(Request $request)
     {
-        $token = $request->input('token');
-        $name = $request->input('name');
+        // Validate input
+        $validation = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+        ], [
+            'name.required' => 'Nama kategori tidak boleh kosong',
+            'name.string' => 'Nama kategori harus berupa string',
+            'name.max' => 'Nama kategori maksimal 255 karakter',
+        ]);
 
-        // Verify token
-        $user = User::where('remember_token', $token)->first();
-        if (!$user) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token tidak valid',
-                'redirect' => '/add/new/bus'
-            ], 401);
+        if ($validation->fails()) {
+            return ResponseHelper::errorResponse(
+                401,
+                $validation->errors(),
+                '/add/new/bus'
+            );
         }
 
-        // Create category
+        $validate = $validation->validate();
+
+        $token = $request->bearerToken();
+
+        $user = User::where('remember_token', $token)->first();
+        if (!$user) {
+            return ResponseHelper::errorResponse(
+                401,
+                'Token tidak valid',
+                '/add/new/bus'
+            );
+        }
+
+        DB::beginTransaction();
+
         try {
             $category = new Categories();
-            $category->name = $name;
+            $category->name = $validate['name'];
             $category->save();
 
-            return response()->json([
-                'status' => 201,
-                'message' => 'Kategori berhasil ditambahkan',
-                'redirect' => '/panel/list/vendor',
-                'data' => $category
-            ], 201);
+            DB::commit();
+
+            return ResponseHelper::successResponse(
+                201,
+                'Kategori berhasil ditambahkan',
+                [
+                    'category' => $category
+                ],
+                '/panel/list/vendor'
+            );
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Gagal menambahkan kategori',
-                'redirect' => '/panel',
-                'error' => $e->getMessage()
-            ], 500);
+            DB::rollBack();
+            return ResponseHelper::errorResponse(
+                500,
+                'Gagal menambahkan kategori',
+                '/panel',
+                $e->getMessage()
+            );
         }
     }
 
+    // TODO : UPDATE CATEGORY === success
     public function update(Request $request)
     {
-        $token = $request->input('token');
-        $id = $request->input('id');
-        $name = $request->input('name');
+        // Validate input
+        $validation = Validator::make($request->all(), [
+            'id' => 'required|exists:categories,id',
+            'name' => 'required|string|max:255',
+            'image' => 'nullable|file|mimes:jpg,jpeg,png'
+        ], [
+            'id.required' => 'ID kategori tidak boleh kosong',
+            'id.exists' => 'Kategori tidak ditemukan',
+            'name.required' => 'Nama kategori tidak boleh kosong',
+            'name.string' => 'Nama kategori harus berupa string',
+            'name.max' => 'Nama kategori maksimal 255 karakter',
+        ]);
 
-        // Verify token
+        if ($validation->fails()) {
+            return ResponseHelper::errorResponse(
+                401,
+                $validation->errors(),
+                '/login'
+            );
+        }
+
+        $validate = $validation->validate();
+
+        $token = $request->bearerToken();
         $user = User::where('remember_token', $token)->first();
         if (!$user) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token tidak valid',
-                'redirect' => '/login'
-            ], 401);
+            return ResponseHelper::errorResponse(
+                401,
+                'Token tidak valid',
+                '/login'
+            );
         }
 
-        // Handle file upload
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $path = $file->storeAs('uploads/categories', time() . '-' . $file->getClientOriginalName(), 'public');
-            $mediaPath = '/storage/' . $path;
-        }
+        DB::beginTransaction();
 
-        // Update category
         try {
-            $category = Categories::find($id);
-            if (!$category) {
-                return response()->json([
-                    'status' => 404,
-                    'message' => 'Kategori tidak ditemukan',
-                    'redirect' => '/panel'
-                ], 404);
-            }
-            $category->name = $name;
-            $category->icon = $mediaPath ?? $category->icon;
-            $category->save();
 
-            return response()->json([
-                'status' => 200,
-                'message' => 'Kategori berhasil diperbarui',
-                'redirect' => '/panel/list/vendor',
-                'data' => $category
-            ], 200);
+            Categories::query()->where('id' ,$validate['id'])->update([
+                'name' => $validate['name']
+            ]);
+            $category = Categories::query()->where('id', $validate['id'])->first();
+
+//            // Handle file upload
+//            if ($request->hasFile('image')) {
+//                $file = $request->file('image');
+//                $path = $file->storeAs('uploads/categories', time() . '-' . $file->getClientOriginalName(), 'public');
+//                $mediaPath = '/storage/' . $path;
+//                $category->icon = $mediaPath;
+//            }
+
+            // Update category
+            DB::commit();
+
+            return ResponseHelper::successResponse(
+                200,
+                'Kategori berhasil diperbarui',
+                [
+                    'category' => $category
+                ],
+                '/panel/list/vendor'
+            );
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Gagal memperbarui kategori',
-                'redirect' => '/panel',
-                'error' => $e->getMessage()
-            ], 500);
+            DB::rollBack();
+            return ResponseHelper::errorResponse(
+                500,
+                'Gagal memperbarui kategori',
+                '/panel',
+                $e->getMessage()
+            );
         }
     }
 
+    // TODO : DELETE CATEGORY === success
     public function delete(Request $request)
     {
-        $token = $request->input('token');
-        $id = $request->input('id');
+        // Validate input
+        $validation = Validator::make($request->all(), [
+            'id' => 'required|exists:categories,id',
+        ], [
+            'id.required' => 'ID kategori tidak boleh kosong',
+            'id.exists' => 'Kategori tidak ditemukan',
+        ]);
 
-        // Verify token
-        $user = User::where('remember_token', $token)->first();
-        if (!$user) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token tidak valid',
-                'redirect' => '/login'
-            ], 401);
+        if ($validation->fails()) {
+            return ResponseHelper::errorResponse(
+                401,
+                $validation->errors(),
+                '/login'
+            );
         }
 
-        // Delete category
+        $validate = $validation->validate();
+        $token = $request->bearerToken();
+
+        $user = User::where('remember_token', $token)->first();
+        if (!$user) {
+            return ResponseHelper::errorResponse(
+                401,
+                'Token tidak valid',
+                '/login'
+            );
+        }
+
+        DB::beginTransaction();
+
         try {
-            $category = Categories::find($id);
-            if (!$category) {
-                return response()->json([
-                    'status' => 404,
-                    'message' => 'Kategori tidak ditemukan',
-                    'redirect' => '/panel'
-                ], 404);
-            }
+            $category = Categories::find($validate['id']);
             $category->delete();
 
-            return response()->json([
-                'status' => 200,
-                'message' => 'Kategori berhasil dihapus',
-                'redirect' => '/panel/list/vendor'
-            ], 200);
+            DB::commit();
+
+            return ResponseHelper::successResponse(
+                200,
+                'Kategori berhasil dihapus',
+                null,
+                '/panel/list/vendor'
+            );
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Gagal menghapus kategori',
-                'redirect' => '/panel',
-                'error' => $e->getMessage()
-            ], 500);
+            DB::rollBack();
+            return ResponseHelper::errorResponse(
+                500,
+                'Gagal menghapus kategori',
+                '/panel',
+                $e->getMessage()
+            );
         }
     }
 
+    // TODO : SHOW CATEGORY === success
     public function show(Request $request)
     {
-        $token = $request->input('token');
-        $id = $request->input('id');
+        // Validate input
+        $validation = Validator::make($request->all(), [
+            'id' => 'nullable|exists:categories,id',
+        ]);
 
-        // Verify token
-        $user = User::where('remember_token', $token)->first();
-
-        if (!$user) {
-            return response()->json([
-                'status' => 401,
-                'message' => "Token tidak valid: {$token}",
-                'redirect' => '/login'
-            ], 401);
-        }
-
-        // Fetch category
         try {
             $query = Categories::query();
-            if ($id) {
-                $query->where('id', $id);
+            if (!empty($validated['id'])) {
+                $query->where('id', $validated['id']);
             }
             $categories = $query->get();
 
-            return response()->json([
-                'status' => 200,
-                'message' => 'Kategori berhasil ditampilkan',
-                'data' => $categories,
-                'redirect' => '/panel/list/facilities'
-            ], 200);
+            return ResponseHelper::successResponse(
+                200,
+                'Kategori berhasil ditampilkan',
+                [
+                    'categories' => $categories
+                ],
+                '/panel/list/facilities'
+            );
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Gagal menampilkan kategori',
-                'redirect' => '/panel',
-                'error' => $e->getMessage()
-            ], 500);
+            return ResponseHelper::errorResponse(
+                500,
+                'Gagal menampilkan kategori',
+                '/panel',
+                $e->getMessage()
+            );
         }
     }
+
 }
