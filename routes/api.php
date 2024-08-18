@@ -51,27 +51,27 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('facilities')->controller(FacilitiesController::class)->group(function () {
-        Route::post('/create/new', 'createNew');
+        Route::post('/add/new', 'createNew');
         Route::post('/add/new/image', 'addNewImage');
         Route::put('/update', 'update');
         Route::delete('/delete', 'delete');
     });
 
     Route::prefix('vendor')->controller(VendorController::class)->group(function () {
-        Route::post('/create/new', 'create');
+        Route::post('/add/new', 'create');
         Route::put('/update', 'update');
         Route::delete('/delete', 'delete');
     });
 
     Route::prefix('brand')->controller(BrandController::class)->group(function () {
-        Route::post('/create/new', 'createNew');
+        Route::post('/add/new', 'createNew');
         Route::put('/update', 'update');
         Route::delete('/delete', 'delete');
     });
 
 
     Route::prefix('image_bus')->controller(ImageBusController::class)->group(function () {
-        Route::post('/create/new', 'createNew');
+        Route::post('/add/new', 'createNew');
         Route::delete('/delete', 'delete');
         Route::get('/show', 'show');
     });

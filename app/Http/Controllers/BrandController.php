@@ -3,18 +3,32 @@
 namespace App\Http\Controllers;
 
 use App\Models\Brand;
-use Illuminate\Http\Request;
 use App\Models\Vendor;
+use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Support\Facades\Validator;
 
 class BrandController extends Controller
 {
     public function create(Request $request)
     {
-        $token = $request->input('token');
-        $name = $request->input('name');
+        // Define validation rules
+        $validation = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+        ]);
 
-        // Verify token
+        // Check if the validation fails
+        if ($validation->fails()) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'Validation Error',
+                'errors' => $validation->errors(),
+            ], 400);
+        }
+
+        $validate = $validation->validate();
+        $token = $request->bearerToken();
+
         $user = User::where('remember_token', $token)->first();
         if (!$user) {
             return response()->json([
@@ -24,18 +38,9 @@ class BrandController extends Controller
             ], 404);
         }
 
-        $tokenVerify = $this->checkToken($token);
-        if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token not valid',
-                'redirect' => '/login'
-            ], 401);
-        }
-
         try {
             $brand = new Brand();
-            $brand->name = $name;
+            $brand->name = $validate['name'];
             $brand->save();
 
             return response()->json([
@@ -47,7 +52,7 @@ class BrandController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
-                'message' => 'Gagal menambahkan vendor',
+                'message' => 'Gagal menambahkan brand',
                 'redirect' => '/panel',
                 'error' => $e->getMessage()
             ], 500);
@@ -56,11 +61,25 @@ class BrandController extends Controller
 
     public function update(Request $request)
     {
-        $token = $request->input('token');
-        $id = $request->input('id');
-        $name = $request->input('name');
+        // Define validation rules
+        $validation = Validator::make($request->all(), [
+            'token' => 'required',
+            'id' => 'required|integer',
+            'name' => 'required|string|max:255',
+        ]);
 
-        // Verify token
+        // Check if the validation fails
+        if ($validation->fails()) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'Validation Error',
+                'errors' => $validation->errors(),
+            ], 400);
+        }
+
+        $validate = $validation->validate();
+        $token = $request->bearerToken();
+
         $user = User::where('remember_token', $token)->first();
         if (!$user) {
             return response()->json([
@@ -70,19 +89,12 @@ class BrandController extends Controller
             ], 404);
         }
 
-        // Token verification (you should implement this in a helper or service)
-        $tokenVerify = $this->checkToken($token);
-        if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token not valid',
-                'redirect' => '/login'
-            ], 401);
-        }
-
-        // Update vendor
         try {
-            $brand = Brand::find($id);
+
+            Brand::query()->where('id' ,$validate['id'])->update([
+                'name' => $validate['name']
+            ]);
+            $brand = Brand::query()->where('id', $validate['id'])->first();
             if (!$brand) {
                 return response()->json([
                     'status' => 404,
@@ -90,14 +102,11 @@ class BrandController extends Controller
                     'redirect' => '/login'
                 ], 404);
             }
-            $brand->name = $name;
-            $brand->user_id = $user->id;
-            $brand->save();
 
             return response()->json([
                 'status' => 200,
                 'message' => 'Berhasil memperbarui brand',
-                'redirect' => '/panel/list/vendor',
+                'redirect' => '/panel/list/brand',
                 'data' => $brand
             ], 200);
         } catch (\Exception $e) {
@@ -112,8 +121,23 @@ class BrandController extends Controller
 
     public function delete(Request $request)
     {
-        $token = $request->input('token');
-        $id = $request->input('id');
+        // Define validation rules
+        $validation = Validator::make($request->all(), [
+            'id' => 'required|integer',
+        ]);
+
+        // Check if the validation fails
+        if ($validation->fails()) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'Validation Error',
+                'errors' => $validation->errors(),
+            ], 400);
+        }
+
+        $validate = $validation->validate();
+        $token = $request->bearerToken();
+
 
         // Verify token
         $user = User::where('remember_token', $token)->first();
@@ -125,32 +149,23 @@ class BrandController extends Controller
             ], 404);
         }
 
-        // Token verification (you should implement this in a helper or service)
-        $tokenVerify = $this->checkToken($token);
-        if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token not valid',
-                'redirect' => '/login'
-            ], 401);
-        }
 
-        // Delete vendor
         try {
-            $brand = Brand::find($id);
+            $brand = Brand::find($validate['id']);
             if (!$brand) {
                 return response()->json([
                     'status' => 404,
-                    'message' => 'Vendor not found',
-                    'redirect' => '/panel'
+                    'message' => 'Brand not found',
+                    'redirect' => '/panel/list/brand'
                 ], 404);
             }
+
             $brand->delete();
 
             return response()->json([
                 'status' => 200,
                 'message' => 'Berhasil menghapus brand',
-                'redirect' => '/panel/list/vendor'
+                'redirect' => '/panel/list/brand',
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -164,41 +179,27 @@ class BrandController extends Controller
 
     public function show(Request $request)
     {
-        $token = $request->input('token');
-        $id = $request->input('id');
+        $id = $request->query('id');
 
-        // Verify token
-        $tokenVerify = $this->checkToken($token);
-        if (!$tokenVerify['valid']) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Token tidak valid',
-                'redirect' => '/login'
-            ], 401);
-        }
-
-        // Check if the user exists with the provided token
-        $user = User::where('remember_token', $token)->first();
-        if (!$user) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'Pengguna tidak ditemukan',
-                'redirect' => '/login'
-            ], 404);
-        }
-
-        // Fetch vendors
         try {
+
             $query = Brand::query();
-            if ($id) {
+            if (!empty($id)) {
                 $query->where('id', $id);
             }
             $brand = $query->get();
 
+            if (!$brand) {
+                return response()->json([
+                    'status' => 404,
+                    'message' => 'Brand not found',
+                    'redirect' => '/panel/list/brand'
+                ], 404);
+            }
+
             return response()->json([
                 'status' => 200,
-                'message' => 'Vendor berhasil ditampilkan',
-                'redirect' => '/panel/list/brand',
+                'message' => 'Berhasil menampilkan brand',
                 'data' => $brand
             ], 200);
         } catch (\Exception $e) {
@@ -211,8 +212,5 @@ class BrandController extends Controller
         }
     }
 
-    private function checkToken($token)
-    {
-        return ['valid' => true];
-    }
+
 }

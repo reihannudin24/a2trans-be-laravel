@@ -211,17 +211,6 @@ class CategoriesController extends Controller
 
         // Get the 'id' from the query parameter
         $id = $request->query('id');
-//
-//        // Verify token
-//        $token = $request->bearerToken();
-//        $user = User::where('remember_token', $token)->first();
-//        if (!$user) {
-//            return ResponseHelper::errorResponse(
-//                401,
-//                'Token tidak valid',
-//                '/login'
-//            );
-//        }
 
         try {
             $query = Categories::query();

@@ -138,16 +138,8 @@ class VendorController extends Controller
     // TODO: SHOW VENDOR === success
     public function show(Request $request)
     {
-        // Validate input
-        $validation = Validator::make($request->all(), [
-            'id' => 'nullable|exists:vendors,id',
-        ]);
+          $id = $request->query('id');
 
-        if ($validation->fails()) {
-            return ResponseHelper::errorResponse(401, $validation->errors(), '/show/vendor');
-        }
-
-        $validated = $validation->validated();
 //        $token = $request->bearerToken();
 //
 //        // Verify token
@@ -158,8 +150,8 @@ class VendorController extends Controller
 
         try {
             $query = Vendor::query();
-            if (!empty($validated['id'])) {
-                $query->where('id', $validated['id']);
+            if (!empty($id)) {
+                $query->where('id', $id);
             }
             $vendors = $query->get();
 
