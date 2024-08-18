@@ -152,13 +152,13 @@ class VendorController extends Controller
         }
 
         $validated = $validation->validated();
-        $token = $request->bearerToken();
-
-        // Verify token
-        $user = User::where('remember_token', $token)->first();
-        if (!$user) {
-            return ResponseHelper::errorResponse(401, 'Token tidak valid', '/login');
-        }
+//        $token = $request->bearerToken();
+//
+//        // Verify token
+//        $user = User::where('remember_token', $token)->first();
+//        if (!$user) {
+//            return ResponseHelper::errorResponse(401, 'Token tidak valid', '/login');
+//        }
 
         try {
             $query = Vendor::query();

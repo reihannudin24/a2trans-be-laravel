@@ -211,7 +211,6 @@ class CategoriesController extends Controller
         $validation = Validator::make($request->all(), [
             'id' => 'nullable|exists:categories,id',
         ]);
-
         if ($validation->fails()) {
             return ResponseHelper::errorResponse(
                 401,
@@ -219,19 +218,18 @@ class CategoriesController extends Controller
                 '/login'
             );
         }
-
         $validated = $validation->validated();
-
-        // Verify token
-        $token = $request->bearerToken();
-        $user = User::where('remember_token', $token)->first();
-        if (!$user) {
-            return ResponseHelper::errorResponse(
-                401,
-                'Token tidak valid',
-                '/login'
-            );
-        }
+//
+//        // Verify token
+//        $token = $request->bearerToken();
+//        $user = User::where('remember_token', $token)->first();
+//        if (!$user) {
+//            return ResponseHelper::errorResponse(
+//                401,
+//                'Token tidak valid',
+//                '/login'
+//            );
+//        }
 
         try {
             $query = Categories::query();
