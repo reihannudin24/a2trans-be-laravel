@@ -94,7 +94,6 @@ class ImageBusController extends Controller
             'id' => 'required',
         ], [
             'id.required' => 'ID gambar tidak boleh kosong',
-            'id.exists' => 'ID gambar tidak ditemukan',
         ]);
 
         if ($validator->fails()) {
