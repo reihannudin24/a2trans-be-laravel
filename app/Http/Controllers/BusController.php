@@ -225,7 +225,7 @@ class BusController extends Controller
             'categories_id' => 'required|exists:categories,id',
             'brand_id' => 'required|exists:brands,id',
             'vendor_id' => 'nullable|exists:vendors,id',
-            'thumbnail' => 'nullabel|file|mimes:jpg,jpeg,png',
+            'thumbnail' => 'nullable|file|mimes:jpg,jpeg,png',
         ], [
             'name.required' => 'Nama bus tidak boleh kosong',
             'description.required' => 'Deskripsi bus tidak boleh kosong',
@@ -287,7 +287,6 @@ class BusController extends Controller
                 '/panel/list/bus'
             );
         } catch (\Exception $e) {
-            dd($e);
             DB::rollBack();
             return ResponseHelper::errorResponse(
                 500,
@@ -310,8 +309,10 @@ class BusController extends Controller
             'type' => 'required|string',
             'categories_id' => 'required|exists:categories,id',
             'brand_id' => 'required|exists:brands,id',
-            'vendor_id' => 'required|exists:vendors,id',
-            'thumbnail' => 'required|file|mimes:jpg,jpeg,png',
+            'vendor_id' => 'nullable|exists:vendors,id',
+            'thumbnail' => 'nullable|file|mimes:jpg,jpeg,png',
+//            'vendor_id' => 'required|exists:vendors,id',
+//            'thumbnail' => 'required|file|mimes:jpg,jpeg,png',
         ], [
             'name.required' => 'Nama bus tidak boleh kosong',
             'description.required' => 'Deskripsi bus tidak boleh kosong',
@@ -319,8 +320,8 @@ class BusController extends Controller
             'type.required' => 'Tipe bus tidak boleh kosong',
             'categories_id.required' => 'ID kategori tidak boleh kosong',
             'brand_id.required' => 'ID merek tidak boleh kosong',
-            'vendor_id.required' => 'ID vendor tidak boleh kosong',
-            'thumbnail.required' => 'Thumbnail tidak boleh kosong',
+//            'vendor_id.required' => 'ID vendor tidak boleh kosong',
+//            'thumbnail.required' => 'Thumbnail tidak boleh kosong',
             'thumbnail.file' => 'File tidak valid',
             'thumbnail.mimes' => 'Thumbnail harus berformat jpg, jpeg, atau png',
         ]);
