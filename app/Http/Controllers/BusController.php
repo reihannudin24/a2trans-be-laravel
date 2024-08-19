@@ -186,6 +186,110 @@ class BusController extends Controller
     }
 
     // TODO : UPDATE BUS === success
+//    public function update(Request $request)
+//    {
+//        // Validate input
+//        $validation = Validator::make($request->all(), [
+//            'id' => 'required',
+//            'name' => 'required|string|max:255',
+//            'description' => 'required|string',
+//            'seat' => 'required|integer',
+//            'type' => 'required|string',
+//            'categories_id' => 'required|exists:categories,id',
+//            'brand_id' => 'required|exists:brands,id',
+//            'vendor_id' => 'nullable',
+//            'thumbnail' => 'nullable|file|mimes:jpg,jpeg,png',
+////            'vendor_id' => 'required|exists:vendors,id',
+////            'thumbnail' => 'required|file|mimes:jpg,jpeg,png',
+//        ], [
+//            'name.required' => 'Nama bus tidak boleh kosong',
+//            'description.required' => 'Deskripsi bus tidak boleh kosong',
+//            'seat.required' => 'Kapasitas kursi tidak boleh kosong',
+//            'type.required' => 'Tipe bus tidak boleh kosong',
+//            'categories_id.required' => 'ID kategori tidak boleh kosong',
+//            'brand_id.required' => 'ID merek tidak boleh kosong',
+////            'vendor_id.required' => 'ID vendor tidak boleh kosong',
+////            'thumbnail.required' => 'Thumbnail tidak boleh kosong',
+//            'thumbnail.file' => 'File tidak valid',
+//            'thumbnail.mimes' => 'Thumbnail harus berformat jpg, jpeg, atau png',
+//        ]);
+//
+//        if ($validation->fails()) {
+//            return ResponseHelper::errorResponse(
+//                401,
+//                $validation->errors(),
+//                '/edit/bus'
+//            );
+//        }
+//
+//        $validated = $validation->validate();
+//        $token = $request->bearerToken();
+//
+//        $user = User::where('remember_token', $token)->first();
+//        if (!$user) {
+//            return ResponseHelper::errorResponse(
+//                401,
+//                'Pengguna tidak valid',
+//                '/edit/bus'
+//            );
+//        }
+//
+//        DB::beginTransaction();
+//
+//        try {
+//            $bus = Bus::find($validated['id']);
+//
+//            if (!$request->hasFile('thumbnail')) {
+//                return ResponseHelper::errorResponse(
+//                    401,
+//                    'Gambar thumbnail tidak ada',
+//                    '/edit/bus'
+//                );
+//            }
+//
+//            if ($bus->thumb) {
+//                $oldThumbnailPath = str_replace('/storage/', '', $bus->thumb);
+//                Storage::disk('public')->delete($oldThumbnailPath);
+//            }
+//
+//
+//            // Store new thumbnail
+//            $thumbnailPath = $request->file('thumbnail')->store('upload', 'public');
+//            $thumbnailUrl = Storage::url($thumbnailPath);
+//            $bus->thumb = $thumbnailUrl;
+//
+//            Bus::query()->where('id', $validated['id'])->update([
+//                'name' => $validated['name'],
+//                'description' => $validated['description'],
+//                'seat' => $validated['seat'],
+//                'thumb' =>  $thumbnailUrl,
+//                'type' => $validated['type'],
+//                'categories_id' => $validated['categories_id'],
+//                'brand_id' => $validated['brand_id'],
+//                'vendor_id' => $validated['vendor_id'],
+//            ]);
+//
+//            DB::commit();
+//
+//            return ResponseHelper::successResponse(
+//                200,
+//                'Bus berhasil diperbarui',
+//                [
+//                    'bus' => $bus
+//                ],
+//                '/panel/list/bus'
+//            );
+//        } catch (\Exception $e) {
+//            dd($e);
+//            DB::rollBack();
+//            return ResponseHelper::errorResponse(
+//                500,
+//                'Gagal memperbarui bus',
+//                '/panel/edit/bus',
+//                $e->getMessage()
+//            );
+//        }
+//    }
     public function update(Request $request)
     {
         // Validate input
@@ -199,8 +303,6 @@ class BusController extends Controller
             'brand_id' => 'required|exists:brands,id',
             'vendor_id' => 'nullable',
             'thumbnail' => 'nullable|file|mimes:jpg,jpeg,png',
-//            'vendor_id' => 'required|exists:vendors,id',
-//            'thumbnail' => 'required|file|mimes:jpg,jpeg,png',
         ], [
             'name.required' => 'Nama bus tidak boleh kosong',
             'description.required' => 'Deskripsi bus tidak boleh kosong',
@@ -208,8 +310,6 @@ class BusController extends Controller
             'type.required' => 'Tipe bus tidak boleh kosong',
             'categories_id.required' => 'ID kategori tidak boleh kosong',
             'brand_id.required' => 'ID merek tidak boleh kosong',
-//            'vendor_id.required' => 'ID vendor tidak boleh kosong',
-//            'thumbnail.required' => 'Thumbnail tidak boleh kosong',
             'thumbnail.file' => 'File tidak valid',
             'thumbnail.mimes' => 'Thumbnail harus berformat jpg, jpeg, atau png',
         ]);
@@ -239,35 +339,29 @@ class BusController extends Controller
         try {
             $bus = Bus::find($validated['id']);
 
-            if (!$request->hasFile('thumbnail')) {
-                return ResponseHelper::errorResponse(
-                    401,
-                    'Gambar thumbnail tidak ada',
-                    '/edit/bus'
-                );
+            if ($request->hasFile('thumbnail')) {
+                if ($bus->thumb) {
+                    $oldThumbnailPath = str_replace('/storage/', '', $bus->thumb);
+                    Storage::disk('public')->delete($oldThumbnailPath);
+                }
+
+                // Store new thumbnail
+                $thumbnailPath = $request->file('thumbnail')->store('upload', 'public');
+                $thumbnailUrl = Storage::url($thumbnailPath);
+                $bus->thumb = $thumbnailUrl;
             }
 
-            if ($bus->thumb) {
-                $oldThumbnailPath = str_replace('/storage/', '', $bus->thumb);
-                Storage::disk('public')->delete($oldThumbnailPath);
-            }
+            // Update other bus fields
+            $bus->name = $validated['name'];
+            $bus->description = $validated['description'];
+            $bus->seat = $validated['seat'];
+            $bus->type = $validated['type'];
+            $bus->categories_id = $validated['categories_id'];
+            $bus->brand_id = $validated['brand_id'];
+            $bus->vendor_id = $validated['vendor_id'];
 
-
-            // Store new thumbnail
-            $thumbnailPath = $request->file('thumbnail')->store('upload', 'public');
-            $thumbnailUrl = Storage::url($thumbnailPath);
-            $bus->thumb = $thumbnailUrl;
-
-            Bus::query()->where('id', $validated['id'])->update([
-                'name' => $validated['name'],
-                'description' => $validated['description'],
-                'seat' => $validated['seat'],
-                'thumb' =>  $thumbnailUrl,
-                'type' => $validated['type'],
-                'categories_id' => $validated['categories_id'],
-                'brand_id' => $validated['brand_id'],
-                'vendor_id' => $validated['vendor_id'],
-            ]);
+            // Save changes to the bus
+            $bus->save();
 
             DB::commit();
 
@@ -280,7 +374,6 @@ class BusController extends Controller
                 '/panel/list/bus'
             );
         } catch (\Exception $e) {
-            dd($e);
             DB::rollBack();
             return ResponseHelper::errorResponse(
                 500,
@@ -290,6 +383,8 @@ class BusController extends Controller
             );
         }
     }
+
+
 
     // TODO : DELETE BUS === success
     public function delete(Request $request)
