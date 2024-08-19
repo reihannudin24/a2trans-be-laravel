@@ -154,9 +154,14 @@ class BusController extends Controller
 //            $thumbnailPath = $request->file('thumbnail')->store('upload', 'public');
 //            $thumbnailUrl = Storage::url($thumbnailPath);
 
+//            $destinationPath = 'public/upload';
+//            $thumbnailPath = $request->file('thumbnail')->store($destinationPath);
+//            $thumbnailUrl = asset(str_replace('public/', '', $thumbnailPath));
+
+
             $destinationPath = 'public/upload';
             $thumbnailPath = $request->file('thumbnail')->store($destinationPath);
-            $thumbnailUrl = asset(str_replace('public/', '', $thumbnailPath));
+            $thumbnailUrl = asset('storage/' . str_replace('public/', '', $thumbnailPath));
 
 
             $bus = Bus::query()->insert([
