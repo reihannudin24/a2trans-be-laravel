@@ -388,7 +388,9 @@ class BusController extends Controller
                 $query->where('id', $id);
             }
 
+
             $buses = $query->get()->map(function ($bus) {
+
                 return [
                     'id' => $bus->id,
                     'name' => $bus->name,
