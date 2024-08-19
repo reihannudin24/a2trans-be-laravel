@@ -150,6 +150,7 @@ class BusController extends Controller
         DB::beginTransaction();
 
         try {
+
             $thumbnailPath = $request->file('thumbnail')->store('upload', 'public');
             $thumbnailUrl = Storage::url($thumbnailPath);
 
@@ -302,7 +303,7 @@ class BusController extends Controller
             'categories_id' => 'required|exists:categories,id',
             'brand_id' => 'required|exists:brands,id',
             'vendor_id' => 'nullable',
-            'thumbnail' => 'nullable|file|mimes:jpg,jpeg,png',
+            'thumbnail' => 'nullable',
         ], [
             'name.required' => 'Nama bus tidak boleh kosong',
             'description.required' => 'Deskripsi bus tidak boleh kosong',
@@ -310,8 +311,6 @@ class BusController extends Controller
             'type.required' => 'Tipe bus tidak boleh kosong',
             'categories_id.required' => 'ID kategori tidak boleh kosong',
             'brand_id.required' => 'ID merek tidak boleh kosong',
-            'thumbnail.file' => 'File tidak valid',
-            'thumbnail.mimes' => 'Thumbnail harus berformat jpg, jpeg, atau png',
         ]);
 
         if ($validation->fails()) {
